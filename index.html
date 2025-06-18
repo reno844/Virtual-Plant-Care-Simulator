@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Virtual Plant Care Simulator</title>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+    <title>Realistic Plant Care Simulator</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -15,7 +14,7 @@
         }
         
         body {
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            background: linear-gradient(135deg, #0a2e38, #1d5d46, #0a2e38);
             color: #fff;
             min-height: 100vh;
             padding: 20px;
@@ -125,11 +124,32 @@
             animation: slideInRight 0.8s ease-out;
         }
         
-        .controls-header {
-            text-align: center;
+        .tabs {
+            display: flex;
+            gap: 10px;
             margin-bottom: 20px;
-            font-size: 1.5rem;
-            color: #98FB98;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            background: #98FB98;
+            color: #000;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
         }
         
         .care-buttons {
@@ -167,6 +187,46 @@
         .care-btn.sunlight i { color: #FFD700; }
         .care-btn.soil i { color: #8B4513; }
         .care-btn.pest i { color: #FF4500; }
+        
+        .pesticide-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .pesticide-btn {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .pesticide-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .weather-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .weather-btn {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .weather-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
         
         .dashboard {
             background: rgba(0, 0, 0, 0.4);
@@ -267,6 +327,14 @@
             align-items: center;
             justify-content: center;
             font-style: italic;
+            transition: opacity 0.5s ease;
+        }
+        
+        .pest-attack {
+            position: absolute;
+            animation: pestMove 10s linear infinite;
+            font-size: 2rem;
+            z-index: 10;
         }
         
         .loading {
@@ -291,6 +359,37 @@
             height: 50px;
             animation: spin 1s linear infinite;
             margin-bottom: 20px;
+        }
+        
+        .plant-selection {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .plant-option {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .plant-option:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+        
+        .plant-option.active {
+            background: rgba(152, 251, 152, 0.3);
+            border: 2px solid #98FB98;
+        }
+        
+        .plant-option i {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
         }
         
         @keyframes spin {
@@ -319,12 +418,39 @@
             100% { transform: scale(1); }
         }
         
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 5px rgba(152, 251, 152, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(152, 251, 152, 0.8); }
+            100% { box-shadow: 0 0 5px rgba(152, 251, 152, 0.5); }
+        }
+        
+        @keyframes pestMove {
+            0% { transform: translateX(-50px) translateY(-50px); }
+            25% { transform: translateX(50px) translateY(50px); }
+            50% { transform: translateX(100px) translateY(-50px); }
+            75% { transform: translateX(-100px) translateY(50px); }
+            100% { transform: translateX(-50px) translateY(-50px); }
+        }
+        
+        .plant-animation {
+            animation: bounce 2s infinite ease-in-out;
+        }
+        
+        .stage-indicator .active {
+            animation: pulseGlow 2s infinite;
+        }
+        
         @media (max-width: 768px) {
             .game-container {
                 flex-direction: column;
             }
             
-            .care-buttons {
+            .care-buttons, .pesticide-options, .weather-controls, .plant-selection {
                 grid-template-columns: 1fr;
             }
         }
@@ -333,14 +459,14 @@
 <body>
     <div class="loading" id="loading">
         <div class="loader"></div>
-        <p>Loading Pyodide environment...</p>
-        <p>This may take a moment</p>
+        <p>Initializing Plant Ecosystem...</p>
+        <p>Preparing realistic growth environment</p>
     </div>
 
     <div class="container">
         <header>
-            <h1><i class="fas fa-seedling"></i> Virtual Plant Care Simulator</h1>
-            <p class="subtitle">Nurture your digital plant to full growth with water, sunlight, soil care, and pest control</p>
+            <h1><i class="fas fa-seedling"></i> Realistic Plant Care Simulator</h1>
+            <p class="subtitle">Nurture diverse plants through dynamic weather patterns and pest invasions</p>
         </header>
         
         <div class="game-container">
@@ -354,28 +480,126 @@
                 </div>
                 <div id="canvas-wrapper">
                     <canvas id="canvas" width="600" height="400"></canvas>
+                    <div id="canvas-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
                 </div>
             </div>
             
             <div class="controls-container">
-                <h2 class="controls-header">Plant Care Controls</h2>
+                <div class="tabs">
+                    <div class="tab active" data-tab="care">Care</div>
+                    <div class="tab" data-tab="weather">Weather</div>
+                    <div class="tab" data-tab="plants">Plants</div>
+                </div>
                 
-                <div class="care-buttons">
-                    <div class="care-btn water" onclick="care('water')">
-                        <i class="fas fa-tint"></i>
-                        <div>Water Plant</div>
+                <!-- Care Tab -->
+                <div class="tab-content active" id="care-tab">
+                    <h2 class="controls-header">Plant Care</h2>
+                    
+                    <div class="care-buttons">
+                        <div class="care-btn water" onclick="care('water')">
+                            <i class="fas fa-tint"></i>
+                            <div>Water Plant</div>
+                        </div>
+                        <div class="care-btn sunlight" onclick="care('sunlight')">
+                            <i class="fas fa-sun"></i>
+                            <div>Give Sunlight</div>
+                        </div>
+                        <div class="care-btn soil" onclick="care('soil')">
+                            <i class="fas fa-seedling"></i>
+                            <div>Improve Soil</div>
+                        </div>
+                        <div class="care-btn pest" onclick="togglePesticides()">
+                            <i class="fas fa-bug"></i>
+                            <div>Pest Control</div>
+                        </div>
                     </div>
-                    <div class="care-btn sunlight" onclick="care('sunlight')">
-                        <i class="fas fa-sun"></i>
-                        <div>Give Sunlight</div>
+                    
+                    <div id="pesticide-section" style="display: none;">
+                        <h3>Select Pesticide</h3>
+                        <div class="pesticide-options">
+                            <div class="pesticide-btn" onclick="applyPesticide('organic')">
+                                <i class="fas fa-leaf"></i>
+                                <div>Organic Neem Oil</div>
+                            </div>
+                            <div class="pesticide-btn" onclick="applyPesticide('chemical')">
+                                <i class="fas fa-flask"></i>
+                                <div>Chemical Spray</div>
+                            </div>
+                            <div class="pesticide-btn" onclick="applyPesticide('natural')">
+                                <i class="fas fa-hand-sparkles"></i>
+                                <div>Natural Predators</div>
+                            </div>
+                            <div class="pesticide-btn" onclick="applyPesticide('systemic')">
+                                <i class="fas fa-syringe"></i>
+                                <div>Systemic Treatment</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="care-btn soil" onclick="care('soil')">
-                        <i class="fas fa-seedling"></i>
-                        <div>Improve Soil</div>
+                </div>
+                
+                <!-- Weather Tab -->
+                <div class="tab-content" id="weather-tab">
+                    <h2 class="controls-header">Weather Control</h2>
+                    <p>Current weather affects your plant's needs:</p>
+                    
+                    <div class="weather-controls">
+                        <div class="weather-btn" onclick="changeWeather('sunny')">
+                            <i class="fas fa-sun"></i>
+                            <div>Sunny</div>
+                        </div>
+                        <div class="weather-btn" onclick="changeWeather('rainy')">
+                            <i class="fas fa-cloud-rain"></i>
+                            <div>Rainy</div>
+                        </div>
+                        <div class="weather-btn" onclick="changeWeather('cloudy')">
+                            <i class="fas fa-cloud"></i>
+                            <div>Cloudy</div>
+                        </div>
+                        <div class="weather-btn" onclick="changeWeather('windy')">
+                            <i class="fas fa-wind"></i>
+                            <div>Windy</div>
+                        </div>
+                        <div class="weather-btn" onclick="changeWeather('stormy')">
+                            <i class="fas fa-bolt"></i>
+                            <div>Stormy</div>
+                        </div>
+                        <div class="weather-btn" onclick="changeWeather('foggy')">
+                            <i class="fas fa-smog"></i>
+                            <div>Foggy</div>
+                        </div>
                     </div>
-                    <div class="care-btn pest" onclick="care('pest')">
-                        <i class="fas fa-bug"></i>
-                        <div>Control Pests</div>
+                </div>
+                
+                <!-- Plants Tab -->
+                <div class="tab-content" id="plants-tab">
+                    <h2 class="controls-header">Select Plant</h2>
+                    <p>Different plants have unique vulnerabilities:</p>
+                    
+                    <div class="plant-selection">
+                        <div class="plant-option active" data-plant="sunflower">
+                            <i class="fas fa-sun"></i>
+                            <div>Sunflower</div>
+                        </div>
+                        <div class="plant-option" data-plant="rose">
+                            <i class="fas fa-spa"></i>
+                            <div>Rose</div>
+                        </div>
+                        <div class="plant-option" data-plant="cactus">
+                            <i class="fas fa-tree"></i>
+                            <div>Cactus</div>
+                        </div>
+                        <div class="plant-option" data-plant="fern">
+                            <i class="fas fa-leaf"></i>
+                            <div>Fern</div>
+                        </div>
+                        <div class="plant-option" data-plant="tomato">
+                            <i class="fas fa-apple-alt"></i>
+                            <div>Tomato</div>
+                        </div>
+                        <div class="plant-option" data-plant="orchid">
+                            <i class="fas fa-feather-alt"></i>
+                            <div>Orchid</div>
+                        </div>
                     </div>
                 </div>
                 
@@ -457,153 +681,240 @@
         </div>
         
         <div class="status-bar">
-            <div>Project: Virtual Plant Care Simulator</div>
-            <div>Tech: Pyodide, HTML5 Canvas</div>
-            <div>GitHub: Ready for Deployment</div>
+            <div>Plant: <span id="current-plant">Sunflower</span></div>
+            <div>Status: <span id="health-status">Healthy</span></div>
+            <div>Weather: <span id="current-weather">Sunny</span></div>
         </div>
     </div>
 
     <script>
+        // Plant data - each plant has specific vulnerabilities
+        const plants = {
+            sunflower: {
+                name: "Sunflower",
+                pests: ["aphids", "caterpillars"],
+                waterNeed: 60,
+                sunlightNeed: 80,
+                soilNeed: 50,
+                pestResistance: 40
+            },
+            rose: {
+                name: "Rose",
+                pests: ["aphids", "spider_mites", "thrips"],
+                waterNeed: 70,
+                sunlightNeed: 70,
+                soilNeed: 60,
+                pestResistance: 30
+            },
+            cactus: {
+                name: "Cactus",
+                pests: ["mealybugs", "scale_insects"],
+                waterNeed: 30,
+                sunlightNeed: 90,
+                soilNeed: 40,
+                pestResistance: 70
+            },
+            fern: {
+                name: "Fern",
+                pests: ["spider_mites", "scale_insects"],
+                waterNeed: 80,
+                sunlightNeed: 40,
+                soilNeed: 70,
+                pestResistance: 50
+            },
+            tomato: {
+                name: "Tomato",
+                pests: ["aphids", "whiteflies", "hornworms"],
+                waterNeed: 70,
+                sunlightNeed: 80,
+                soilNeed: 70,
+                pestResistance: 35
+            },
+            orchid: {
+                name: "Orchid",
+                pests: ["mealybugs", "scale_insects", "thrips"],
+                waterNeed: 50,
+                sunlightNeed: 60,
+                soilNeed: 60,
+                pestResistance: 45
+            }
+        };
+
+        // Pest data - each pest has specific characteristics
+        const pests = {
+            aphids: {
+                name: "Aphids",
+                damage: 3,
+                pesticides: {
+                    organic: 80,
+                    chemical: 95,
+                    natural: 70,
+                    systemic: 90
+                }
+            },
+            caterpillars: {
+                name: "Caterpillars",
+                damage: 5,
+                pesticides: {
+                    organic: 60,
+                    chemical: 85,
+                    natural: 75,
+                    systemic: 80
+                }
+            },
+            spider_mites: {
+                name: "Spider Mites",
+                damage: 4,
+                pesticides: {
+                    organic: 70,
+                    chemical: 90,
+                    natural: 65,
+                    systemic: 85
+                }
+            },
+            mealybugs: {
+                name: "Mealybugs",
+                damage: 3,
+                pesticides: {
+                    organic: 75,
+                    chemical: 95,
+                    natural: 60,
+                    systemic: 85
+                }
+            },
+            scale_insects: {
+                name: "Scale Insects",
+                damage: 2,
+                pesticides: {
+                    organic: 65,
+                    chemical: 90,
+                    natural: 50,
+                    systemic: 95
+                }
+            },
+            thrips: {
+                name: "Thrips",
+                damage: 4,
+                pesticides: {
+                    organic: 70,
+                    chemical: 85,
+                    natural: 60,
+                    systemic: 80
+                }
+            },
+            whiteflies: {
+                name: "Whiteflies",
+                damage: 3,
+                pesticides: {
+                    organic: 75,
+                    chemical: 90,
+                    natural: 70,
+                    systemic: 85
+                }
+            },
+            hornworms: {
+                name: "Hornworms",
+                damage: 6,
+                pesticides: {
+                    organic: 65,
+                    chemical: 85,
+                    natural: 80,
+                    systemic: 75
+                }
+            }
+        };
+
         // Global variables
-        let pyodide;
         let plantStage = 0; // 0: seed, 1: sprout, 2: mature
         let stats = { water: 50, sunlight: 50, soil: 50, pestRisk: 20 };
         let weather = 'sunny';
         let plantHealth = 100;
-        let messages = [
-            "Your plant is looking great!",
-            "Plants need regular care to thrive.",
-            "Try different care techniques!",
-            "Watch out for pests!",
-            "Your plant is growing nicely!",
-            "Sunlight is essential for growth.",
-            "Good soil makes healthy plants.",
-            "Water is life for your plant."
-        ];
+        let growthPoints = 0;
+        let weatherInterval, statInterval, pestInterval;
+        let currentPlant = 'sunflower';
+        let activePests = {};
+        let activePestElements = [];
         
         // DOM elements
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const loadingScreen = document.getElementById('loading');
+        const overlay = document.getElementById('canvas-overlay');
         
         // Initialize the app
-        async function loadPyodideAndRun() {
+        function initApp() {
             // Show loading screen
             loadingScreen.style.display = 'flex';
             
-            try {
-                // Load Pyodide
-                pyodide = await loadPyodide();
-                
-                // Load Python code
-                await pyodide.loadPackage("micropip");
-                await pyodide.runPythonAsync(`
-import micropip
-await micropip.install('numpy')
-                `);
-                
-                // Define Python functions
-                await pyodide.runPythonAsync(`
-import random
-import math
-import numpy as np
-
-plant_names = ["Sunflower", "Rose", "Tulip", "Cactus", "Fern", "Orchid"]
-
-def get_random_plant_name():
-    return random.choice(plant_names)
-
-def apply_care(action, stats):
-    if action == 'water':
-        stats['water'] = min(100, stats['water'] + random.randint(15, 25))
-    elif action == 'sunlight':
-        stats['sunlight'] = min(100, stats['sunlight'] + random.randint(15, 25))
-    elif action == 'soil':
-        stats['soil'] = min(100, stats['soil'] + random.randint(15, 25))
-    elif action == 'pest':
-        stats['pestRisk'] = max(0, stats['pestRisk'] - random.randint(15, 25))
-    
-    # Update plant health based on care
-    health_boost = 0
-    if action == 'water':
-        health_boost = 5
-    elif action == 'sunlight':
-        health_boost = 4
-    elif action == 'soil':
-        health_boost = 6
-    elif action == 'pest':
-        health_boost = 7
-    
-    return health_boost
-
-def update_weather():
-    weathers = ['sunny', 'rainy', 'cloudy', 'windy']
-    return random.choice(weathers)
-
-def update_growth(stats):
-    # Calculate growth factor based on stats
-    growth_factor = (stats['water'] * 0.3 + stats['sunlight'] * 0.3 + stats['soil'] * 0.4) - (stats['pestRisk'] * 0.5)
-    
-    # Determine plant stage
-    if growth_factor > 70:
-        return 2  # Mature
-    elif growth_factor > 40:
-        return 1  # Sprout
-    return 0  # Seed
-
-def update_stats(stats):
-    # Degrade stats over time
-    stats['water'] = max(0, stats['water'] - random.randint(1, 3))
-    stats['sunlight'] = max(0, stats['sunlight'] - random.randint(1, 3))
-    stats['soil'] = max(0, stats['soil'] - random.randint(1, 2))
-    
-    # Pest risk increases over time
-    stats['pestRisk'] = min(100, stats['pestRisk'] + random.randint(1, 3))
-    
-    # Calculate health impact
-    health_impact = 0
-    if stats['water'] < 30:
-        health_impact -= random.randint(1, 3)
-    if stats['sunlight'] < 30:
-        health_impact -= random.randint(1, 3)
-    if stats['soil'] < 30:
-        health_impact -= random.randint(1, 3)
-    if stats['pestRisk'] > 50:
-        health_impact -= random.randint(2, 5)
-    
-    return health_impact
-                `);
-                
-                // Initialize plant name
-                const plantName = pyodide.runPython('get_random_plant_name()');
-                document.getElementById('plant-name').textContent = plantName;
-                
-                // Draw initial plant
-                drawPlant();
-                updateDashboard();
-                
-                // Hide loading screen
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                    showMessage("Your plant care journey begins! Start by watering your plant.");
-                }, 1500);
+            // Set initial plant name
+            document.getElementById('plant-name').textContent = plants[currentPlant].name;
+            document.getElementById('current-plant').textContent = plants[currentPlant].name;
+            
+            // Draw initial plant
+            drawPlant();
+            updateDashboard();
+            
+            // Hide loading screen
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                showMessage(`You're growing a ${plants[currentPlant].name}! Start by watering your plant.`);
                 
                 // Start game loops
-                setInterval(updateWeather, 10000); // Update weather every 10 seconds
-                setInterval(degradeStats, 3000);   // Degrade stats every 3 seconds
-                
-            } catch (error) {
-                console.error("Error loading Pyodide:", error);
-                loadingScreen.innerHTML = `
-                    <div style="text-align: center; padding: 20px;">
-                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 20px;"></i>
-                        <h2>Error Loading Simulator</h2>
-                        <p>Failed to load Pyodide environment.</p>
-                        <p>${error.message}</p>
-                        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #98FB98; border: none; border-radius: 5px; cursor: pointer;">Try Again</button>
-                    </div>
-                `;
-            }
+                startGameLoops();
+            }, 2000);
+            
+            // Setup tab switching
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+                });
+            });
+            
+            // Setup plant selection
+            document.querySelectorAll('.plant-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.plant-option').forEach(o => o.classList.remove('active'));
+                    option.classList.add('active');
+                    selectPlant(option.dataset.plant);
+                });
+            });
+        }
+        
+        function selectPlant(plantType) {
+            currentPlant = plantType;
+            stats.water = 50;
+            stats.sunlight = 50;
+            stats.soil = 50;
+            stats.pestRisk = 20;
+            plantHealth = 100;
+            plantStage = 0;
+            activePests = {};
+            
+            // Clear existing pest elements
+            activePestElements.forEach(el => el.remove());
+            activePestElements = [];
+            
+            document.getElementById('plant-name').textContent = plants[plantType].name;
+            document.getElementById('current-plant').textContent = plants[plantType].name;
+            showMessage(`You're now growing a ${plants[plantType].name}!`);
+            
+            drawPlant();
+            updateDashboard();
+        }
+        
+        function startGameLoops() {
+            // Clear any existing intervals
+            if (weatherInterval) clearInterval(weatherInterval);
+            if (statInterval) clearInterval(statInterval);
+            if (pestInterval) clearInterval(pestInterval);
+            
+            // Start new intervals
+            weatherInterval = setInterval(updateWeather, 15000); // Update weather every 15 seconds
+            statInterval = setInterval(degradeStats, 3000);      // Degrade stats every 3 seconds
+            pestInterval = setInterval(checkForPestAttack, 10000); // Check for pests every 10 seconds
         }
         
         // Draw plant based on current stage
@@ -689,7 +1000,7 @@ def update_stats(stats):
                 drawCloud(300, 90, 70);
                 drawCloud(500, 60, 50);
                 
-            } else { // windy
+            } else if (weather === 'windy') {
                 gradient.addColorStop(0, '#5F9EA0');
                 gradient.addColorStop(1, '#B0E0E6');
                 
@@ -704,14 +1015,61 @@ def update_stats(stats):
                     ctx.lineWidth = 2;
                     ctx.stroke();
                 }
+            } else if (weather === 'stormy') {
+                gradient.addColorStop(0, '#2c3e50');
+                gradient.addColorStop(1, '#34495e');
+                
+                // Draw storm clouds
+                drawCloud(100, 50, 80, '#2c3e50');
+                drawCloud(300, 70, 90, '#2c3e50');
+                drawCloud(500, 40, 70, '#2c3e50');
+                
+                // Draw lightning
+                for (let i = 0; i < 3; i++) {
+                    const x = 100 + Math.random() * 400;
+                    ctx.beginPath();
+                    ctx.moveTo(x, 50);
+                    ctx.lineTo(x-10, 100);
+                    ctx.lineTo(x+5, 80);
+                    ctx.lineTo(x-5, 130);
+                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+                
+                // Draw heavy rain
+                for (let i = 0; i < 70; i++) {
+                    const x = Math.random() * canvas.width;
+                    const y = Math.random() * canvas.height;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x - 8, y + 20);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+            } else { // foggy
+                gradient.addColorStop(0, '#bdc3c7');
+                gradient.addColorStop(1, '#ecf0f1');
+                
+                // Draw fog
+                for (let i = 0; i < 20; i++) {
+                    const x = Math.random() * canvas.width;
+                    const y = 100 + Math.random() * 200;
+                    const size = 50 + Math.random() * 100;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.fill();
+                }
             }
             
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
         
-        function drawCloud(x, y, size) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        function drawCloud(x, y, size, color = 'rgba(255, 255, 255, 0.8)') {
+            ctx.fillStyle = color;
             ctx.beginPath();
             ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
             ctx.arc(x + size * 0.5, y - size * 0.2, size * 0.5, 0, Math.PI * 2);
@@ -780,33 +1138,162 @@ def update_stats(stats):
         }
         
         function drawMaturePlant(x, y) {
+            // Draw plant based on type
+            switch(currentPlant) {
+                case 'sunflower':
+                    drawSunflower(x, y);
+                    break;
+                case 'rose':
+                    drawRose(x, y);
+                    break;
+                case 'cactus':
+                    drawCactus(x, y);
+                    break;
+                case 'fern':
+                    drawFern(x, y);
+                    break;
+                case 'tomato':
+                    drawTomato(x, y);
+                    break;
+                case 'orchid':
+                    drawOrchid(x, y);
+                    break;
+                default:
+                    drawSunflower(x, y);
+            }
+        }
+        
+        function drawSunflower(x, y) {
             // Stem
-            ctx.fillStyle = '#006400';
-            ctx.fillRect(x - 8, y - 120, 16, 120);
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(x - 8, y - 150, 16, 150);
             
             // Leaves
             ctx.fillStyle = '#32CD32';
-            drawLeaf(x, y - 40, -30, 30);
-            drawLeaf(x, y - 80, 30, 30);
-            drawLeaf(x, y - 60, -60, 25);
-            drawLeaf(x, y - 100, 60, 25);
+            drawLeaf(x, y - 70, -30, 40);
+            drawLeaf(x, y - 100, 30, 40);
+            drawLeaf(x, y - 50, -60, 35);
+            drawLeaf(x, y - 120, 60, 35);
             
             // Flower
-            ctx.fillStyle = '#FF6347';
-            for (let i = 0; i < 8; i++) {
-                const angle = (i * 45) * Math.PI / 180;
-                const petalX = x + 25 * Math.cos(angle);
-                const petalY = y - 140 + 25 * Math.sin(angle);
+            ctx.fillStyle = '#FFD700';
+            for (let i = 0; i < 20; i++) {
+                const angle = (i * 18) * Math.PI / 180;
+                const petalX = x + 40 * Math.cos(angle);
+                const petalY = y - 180 + 30 * Math.sin(angle);
                 ctx.beginPath();
-                ctx.ellipse(petalX, petalY, 15, 8, angle, 0, Math.PI * 2);
+                ctx.ellipse(petalX, petalY, 20, 10, angle, 0, Math.PI * 2);
                 ctx.fill();
             }
             
             // Flower center
-            ctx.fillStyle = '#FFD700';
+            ctx.fillStyle = '#8B4513';
             ctx.beginPath();
-            ctx.arc(x, y - 140, 12, 0, Math.PI * 2);
+            ctx.arc(x, y - 180, 20, 0, Math.PI * 2);
             ctx.fill();
+        }
+        
+        function drawRose(x, y) {
+            // Stem
+            ctx.fillStyle = '#006400';
+            ctx.fillRect(x - 5, y - 120, 10, 120);
+            
+            // Thorns
+            ctx.fillStyle = '#8B4513';
+            for (let i = 0; i < 5; i++) {
+                const thornY = y - 20 - i * 25;
+                ctx.beginPath();
+                ctx.moveTo(x, thornY);
+                ctx.lineTo(x - 8, thornY - 5);
+                ctx.lineTo(x + 8, thornY - 5);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // Leaves
+            ctx.fillStyle = '#32CD32';
+            drawLeaf(x, y - 50, -30, 25);
+            drawLeaf(x, y - 80, 30, 25);
+            
+            // Rose
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(x, y - 140, 25, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Rose inner petals
+            ctx.fillStyle = '#FF6347';
+            ctx.beginPath();
+            ctx.arc(x, y - 140, 18, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawCactus(x, y) {
+            // Main body
+            ctx.fillStyle = '#32CD32';
+            ctx.fillRect(x - 20, y - 150, 40, 150);
+            
+            // Arms
+            ctx.fillRect(x - 60, y - 100, 40, 20);
+            ctx.fillRect(x + 20, y - 130, 20, 40);
+            
+            // Spikes
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 20; i++) {
+                const spikeX = x - 20 + Math.random() * 40;
+                const spikeY = y - 150 + Math.random() * 150;
+                const angle = Math.random() * Math.PI * 2;
+                const length = 5 + Math.random() * 5;
+                
+                ctx.beginPath();
+                ctx.moveTo(spikeX, spikeY);
+                ctx.lineTo(spikeX + Math.cos(angle) * length, spikeY + Math.sin(angle) * length);
+                ctx.stroke();
+            }
+            
+            // Flower
+            if (plantStage === 2) {
+                ctx.fillStyle = '#FF69B4';
+                ctx.beginPath();
+                ctx.arc(x, y - 160, 15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        function drawFern(x, y) {
+            // Stem
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(x - 5, y - 120, 10, 120);
+            
+            // Fronds
+            ctx.fillStyle = '#32CD32';
+            for (let i = 0; i < 8; i++) {
+                const angle = -60 + i * 20;
+                const size = 40 - Math.abs(i - 4) * 5;
+                drawFernFrond(x, y - 100 + i * 15, angle, size);
+            }
+        }
+        
+        function drawFernFrond(x, y, angle, size) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle * Math.PI / 180);
+            
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            for (let i = 0; i < size; i++) {
+                const curve = Math.sin(i / size * Math.PI) * 20;
+                ctx.lineTo(i, curve);
+            }
+            for (let i = size; i > 0; i--) {
+                const curve = Math.sin(i / size * Math.PI) * -20;
+                ctx.lineTo(i, curve);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.restore();
         }
         
         function updateStageIndicator(stage) {
@@ -819,10 +1306,8 @@ def update_stats(stats):
             });
         }
         
-        function updateWeather() {
-            if (!pyodide || !pyodide.globals.update_weather) return;
-            
-            weather = pyodide.globals.update_weather();
+        function changeWeather(newWeather) {
+            weather = newWeather;
             
             // Update weather display
             const weatherDisplay = document.getElementById('weather-display');
@@ -845,24 +1330,74 @@ def update_stats(stats):
                     icon = '<i class="fas fa-wind"></i>';
                     text = 'Windy';
                     break;
+                case 'stormy':
+                    icon = '<i class="fas fa-bolt"></i>';
+                    text = 'Stormy';
+                    break;
+                case 'foggy':
+                    icon = '<i class="fas fa-smog"></i>';
+                    text = 'Foggy';
+                    break;
             }
             
             weatherDisplay.innerHTML = `${icon} <span>${text}</span>`;
+            document.getElementById('current-weather').textContent = text;
+            
+            // Weather effects on plant
+            applyWeatherEffects();
             
             // Redraw to show weather effects
             drawPlant();
+            updateDashboard();
+            updateGrowth();
+            
+            // Show message
+            showMessage(`Weather changed to ${text.toLowerCase()}!`);
+        }
+        
+        function applyWeatherEffects() {
+            switch (weather) {
+                case 'sunny':
+                    stats.sunlight = Math.min(100, stats.sunlight + 8);
+                    stats.water = Math.max(0, stats.water - 5);
+                    break;
+                case 'rainy':
+                    stats.water = Math.min(100, stats.water + 15);
+                    stats.sunlight = Math.max(0, stats.sunlight - 3);
+                    stats.pestRisk = Math.min(100, stats.pestRisk + 3);
+                    break;
+                case 'cloudy':
+                    stats.sunlight = Math.max(0, stats.sunlight - 4);
+                    break;
+                case 'windy':
+                    stats.pestRisk = Math.max(0, stats.pestRisk - 8);
+                    stats.water = Math.max(0, stats.water - 3);
+                    break;
+                case 'stormy':
+                    stats.water = Math.min(100, stats.water + 25);
+                    stats.sunlight = Math.max(0, stats.sunlight - 8);
+                    stats.pestRisk = Math.min(100, stats.pestRisk + 10);
+                    // Chance to damage plant
+                    if (Math.random() > 0.7) {
+                        plantHealth = Math.max(0, plantHealth - 10);
+                        showMessage("Storm damage! Your plant has been hurt.");
+                    }
+                    break;
+                case 'foggy':
+                    stats.sunlight = Math.max(0, stats.sunlight - 6);
+                    stats.water = Math.min(100, stats.water + 5);
+                    stats.pestRisk = Math.min(100, stats.pestRisk + 5);
+                    break;
+            }
+        }
+        
+        function updateWeather() {
+            const weatherTypes = ['sunny', 'rainy', 'cloudy', 'windy', 'stormy', 'foggy'];
+            const newWeather = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
+            changeWeather(newWeather);
         }
         
         function care(action) {
-            if (!pyodide || !pyodide.globals.apply_care) return;
-            
-            // Apply care action
-            const healthBoost = pyodide.globals.apply_care(action, stats);
-            plantHealth = Math.min(100, plantHealth + healthBoost);
-            
-            // Update plant stage
-            plantStage = pyodide.globals.update_growth(stats);
-            
             // Visual feedback
             const btn = document.querySelector(`.care-btn.${action}`);
             btn.style.animation = 'pulse 0.5s';
@@ -870,53 +1405,217 @@ def update_stats(stats):
                 btn.style.animation = '';
             }, 500);
             
-            // Show message
-            let message;
+            // Apply care action
             switch (action) {
                 case 'water': 
-                    message = "You watered the plant! Hydration is important for growth."; 
+                    stats.water = Math.min(100, stats.water + 25);
+                    showMessage("You watered the plant! Hydration is important for growth.");
+                    createEffect('water');
                     break;
                 case 'sunlight': 
-                    message = "Sunlight provided! Plants need light for photosynthesis."; 
+                    stats.sunlight = Math.min(100, stats.sunlight + 25);
+                    showMessage("Sunlight provided! Plants need light for photosynthesis.");
+                    createEffect('sun');
                     break;
                 case 'soil': 
-                    message = "Soil improved! Nutrients are essential for healthy roots."; 
-                    break;
-                case 'pest': 
-                    message = "Pests controlled! Protecting your plant from invaders."; 
+                    stats.soil = Math.min(100, stats.soil + 25);
+                    showMessage("Soil improved! Nutrients are essential for healthy roots.");
+                    createEffect('soil');
                     break;
             }
-            showMessage(message);
             
             // Update display
-            drawPlant();
             updateDashboard();
+            updateGrowth();
+            drawPlant();
+        }
+        
+        function togglePesticides() {
+            const section = document.getElementById('pesticide-section');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function applyPesticide(type) {
+            let pestsRemoved = 0;
+            let effectiveness = 0;
+            
+            // Apply pesticide to each active pest
+            for (const pestId in activePests) {
+                const pest = activePests[pestId];
+                const effectivenessRate = pests[pest.type].pesticides[type] || 50;
+                
+                if (Math.random() * 100 < effectivenessRate) {
+                    // Remove pest
+                    pest.element.remove();
+                    delete activePests[pestId];
+                    pestsRemoved++;
+                }
+                
+                effectiveness += effectivenessRate;
+            }
+            
+            effectiveness = Math.round(effectiveness / Math.max(1, Object.keys(activePests).length));
+            
+            if (pestsRemoved > 0) {
+                showMessage(`Pesticide applied! Removed ${pestsRemoved} pests. Effectiveness: ${effectiveness}%`);
+            } else {
+                showMessage(`Pesticide had no effect on these pests. Try a different type!`);
+            }
+            
+            // Update pest risk
+            stats.pestRisk = Math.max(0, stats.pestRisk - (pestsRemoved * 10));
+            updateDashboard();
+            
+            // Hide pesticide section
+            document.getElementById('pesticide-section').style.display = 'none';
+        }
+        
+        function createEffect(type) {
+            const effect = document.createElement('div');
+            effect.style.position = 'absolute';
+            effect.style.pointerEvents = 'none';
+            effect.style.zIndex = '5';
+            
+            if (type === 'water') {
+                effect.innerHTML = '<i class="fas fa-tint" style="color: #1E90FF; font-size: 24px;"></i>';
+                effect.style.left = `${Math.random() * 100}%`;
+                effect.style.top = `${Math.random() * 100}%`;
+                effect.style.animation = 'fall 2s linear';
+            } else if (type === 'sun') {
+                effect.innerHTML = '<i class="fas fa-sun" style="color: #FFD700; font-size: 24px;"></i>';
+                effect.style.left = `${Math.random() * 100}%`;
+                effect.style.top = `${Math.random() * 100}%`;
+                effect.style.animation = 'floatUp 2s linear';
+            } else if (type === 'soil') {
+                effect.innerHTML = '<i class="fas fa-seedling" style="color: #32CD32; font-size: 24px;"></i>';
+                effect.style.left = `${Math.random() * 100}%`;
+                effect.style.bottom = '0';
+                effect.style.animation = 'grow 2s linear';
+            }
+            
+            overlay.appendChild(effect);
+            
+            // Remove effect after animation
+            setTimeout(() => {
+                effect.remove();
+            }, 2000);
         }
         
         function degradeStats() {
-            if (!pyodide || !pyodide.globals.update_stats) return;
-            
             // Degrade stats over time
-            const healthImpact = pyodide.globals.update_stats(stats);
+            stats.water = Math.max(0, stats.water - 1);
+            stats.sunlight = Math.max(0, stats.sunlight - 1);
+            stats.soil = Math.max(0, stats.soil - 0.5);
+            stats.pestRisk = Math.min(100, stats.pestRisk + 0.5);
+            
+            // Apply pest damage
+            for (const pestId in activePests) {
+                const pest = activePests[pestId];
+                plantHealth = Math.max(0, plantHealth - pests[pest.type].damage * 0.1);
+            }
+            
+            // Calculate health impact
+            let healthImpact = 0;
+            if (stats.water < plants[currentPlant].waterNeed) healthImpact -= 1;
+            if (stats.sunlight < plants[currentPlant].sunlightNeed) healthImpact -= 1;
+            if (stats.soil < plants[currentPlant].soilNeed) healthImpact -= 1;
+            if (stats.pestRisk > 50) healthImpact -= 2;
+            
             plantHealth = Math.max(0, plantHealth + healthImpact);
             
-            // Update plant stage
-            plantStage = pyodide.globals.update_growth(stats);
+            // Update plant health status
+            let healthStatus = "Healthy";
+            if (plantHealth < 70) healthStatus = "Needs Attention";
+            if (plantHealth < 40) healthStatus = "Stressed";
+            if (plantHealth < 20) healthStatus = "Dying";
+            document.getElementById('health-status').textContent = healthStatus;
             
             // Show message if stats are critical
-            if (stats.water < 20) {
-                showMessage("Warning: Your plant is thirsty! Water it soon.");
-            } else if (stats.sunlight < 20) {
-                showMessage("Warning: Your plant needs more sunlight!");
-            } else if (stats.soil < 20) {
-                showMessage("Warning: Soil quality is low! Improve the soil.");
+            if (stats.water < plants[currentPlant].waterNeed) {
+                showMessage(`Warning: Your ${plants[currentPlant].name} needs more water!`);
+            } else if (stats.sunlight < plants[currentPlant].sunlightNeed) {
+                showMessage(`Warning: Your ${plants[currentPlant].name} needs more sunlight!`);
+            } else if (stats.soil < plants[currentPlant].soilNeed) {
+                showMessage(`Warning: Soil quality is low for your ${plants[currentPlant].name}!`);
             } else if (stats.pestRisk > 60) {
-                showMessage("Warning: Pest risk is high! Control pests soon.");
+                showMessage(`Warning: Pest risk is high for your ${plants[currentPlant].name}!`);
             }
             
             // Update display
-            drawPlant();
             updateDashboard();
+            updateGrowth();
+        }
+        
+        function checkForPestAttack() {
+            // Base chance for pest attack
+            let attackChance = stats.pestRisk / 100;
+            
+            // Reduce chance based on plant resistance
+            attackChance *= (100 - plants[currentPlant].pestResistance) / 100;
+            
+            if (Math.random() < attackChance) {
+                // Select a random pest that affects this plant
+                const possiblePests = plants[currentPlant].pests;
+                const pestType = possiblePests[Math.floor(Math.random() * possiblePests.length)];
+                
+                // Add pest to plant
+                addPest(pestType);
+                
+                // Show message
+                showMessage(`Pest alert! ${pests[pestType].name} is attacking your ${plants[currentPlant].name}!`);
+            }
+        }
+        
+        function addPest(pestType) {
+            const pestId = 'pest-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+            
+            // Create pest element
+            const pest = document.createElement('div');
+            pest.className = 'pest-attack';
+            pest.innerHTML = pestType === 'caterpillar' ? '🐛' : '🐞';
+            pest.style.left = Math.random() * 80 + 10 + '%';
+            pest.style.top = Math.random() * 50 + 25 + '%';
+            pest.style.fontSize = (1 + Math.random() * 2) + 'rem';
+            
+            overlay.appendChild(pest);
+            
+            // Store pest information
+            activePests[pestId] = {
+                type: pestType,
+                element: pest
+            };
+            activePestElements.push(pest);
+            
+            // Update pest risk
+            stats.pestRisk = Math.min(100, stats.pestRisk + 15);
+            updateDashboard();
+        }
+        
+        function updateGrowth() {
+            // Calculate growth points
+            const waterFactor = Math.min(1, stats.water / plants[currentPlant].waterNeed);
+            const sunlightFactor = Math.min(1, stats.sunlight / plants[currentPlant].sunlightNeed);
+            const soilFactor = Math.min(1, stats.soil / plants[currentPlant].soilNeed);
+            const pestFactor = 1 - (stats.pestRisk / 200);
+            
+            const growthFactor = (waterFactor + sunlightFactor + soilFactor) / 3 * pestFactor;
+            
+            // Determine plant stage
+            const prevStage = plantStage;
+            
+            if (growthFactor > 0.7) {
+                plantStage = 2;  // Mature
+            } else if (growthFactor > 0.4) {
+                plantStage = 1;  // Sprout
+            } else {
+                plantStage = 0;  // Seed
+            }
+            
+            // Redraw if stage changed
+            if (prevStage !== plantStage) {
+                drawPlant();
+                showMessage(`Your ${plants[currentPlant].name} has grown to a new stage!`);
+            }
         }
         
         function updateDashboard() {
@@ -944,8 +1643,30 @@ def update_stats(stats):
             }, 4000);
         }
         
+        // Add custom animations to style
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes fall {
+                0% { transform: translateY(-100px); opacity: 1; }
+                100% { transform: translateY(100px); opacity: 0; }
+            }
+            
+            @keyframes floatUp {
+                0% { transform: translateY(100px) scale(0.5); opacity: 0; }
+                50% { transform: translateY(0) scale(1); opacity: 1; }
+                100% { transform: translateY(-100px) scale(0.5); opacity: 0; }
+            }
+            
+            @keyframes grow {
+                0% { transform: scale(0.1); opacity: 0; }
+                50% { transform: scale(1); opacity: 1; }
+                100% { transform: scale(1.5); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+        
         // Initialize the app
-        loadPyodideAndRun();
+        initApp();
     </script>
 </body>
 </html>
