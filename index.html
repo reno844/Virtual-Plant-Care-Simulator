@@ -496,9 +496,17 @@
                 pyodide = await loadPyodide();
                 
                 // Load Python code
+                await pyodide.loadPackage("micropip");
+                await pyodide.runPythonAsync(`
+import micropip
+await micropip.install('numpy')
+                `);
+                
+                // Define Python functions
                 await pyodide.runPythonAsync(`
 import random
 import math
+import numpy as np
 
 plant_names = ["Sunflower", "Rose", "Tulip", "Cactus", "Fern", "Orchid"]
 
@@ -567,7 +575,7 @@ def update_stats(stats):
                 `);
                 
                 // Initialize plant name
-                const plantName = pyodide.globals.get_random_plant_name();
+                const plantName = pyodide.runPython('get_random_plant_name()');
                 document.getElementById('plant-name').textContent = plantName;
                 
                 // Draw initial plant
@@ -812,6 +820,8 @@ def update_stats(stats):
         }
         
         function updateWeather() {
+            if (!pyodide || !pyodide.globals.update_weather) return;
+            
             weather = pyodide.globals.update_weather();
             
             // Update weather display
@@ -844,6 +854,8 @@ def update_stats(stats):
         }
         
         function care(action) {
+            if (!pyodide || !pyodide.globals.apply_care) return;
+            
             // Apply care action
             const healthBoost = pyodide.globals.apply_care(action, stats);
             plantHealth = Math.min(100, plantHealth + healthBoost);
@@ -882,6 +894,8 @@ def update_stats(stats):
         }
         
         function degradeStats() {
+            if (!pyodide || !pyodide.globals.update_stats) return;
+            
             // Degrade stats over time
             const healthImpact = pyodide.globals.update_stats(stats);
             plantHealth = Math.max(0, plantHealth + healthImpact);
