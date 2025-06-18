@@ -1,43 +1,4 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -46,13 +7,8 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; }
         #canvas { border: 1px solid #000; background: #87ceeb; }
-        #controls, #dashboard, #tutorial, #chat, #save-load { margin-top: 10px; padding: 10px; background: #fff; border-radius: 5px; }
+        #controls, #dashboard { margin-top: 10px; padding: 10px; background: #fff; border-radius: 5px; }
         button { padding: 5px 10px; margin: 2px; }
-        #chat-messages { height: 100px; overflow-y: auto; border: 1px solid #ccc; padding: 5px; }
-        @media (max-width: 768px) {
-            #canvas { width: 100%; height: auto; }
-            #controls, #dashboard, #tutorial, #chat, #save-load { width: 100%; }
-        }
     </style>
 </head>
 <body>
@@ -65,150 +21,19 @@
         <button onclick="care('pest')">Control Pests</button>
     </div>
     <div id="dashboard"></div>
-    <div id="tutorial" style="display: none;">
-        <h3>Tutorial</h3>
-        <p>Step 1: Click "Water" to hydrate your plant.</p>
-        <p>Step 2: Use "Sunlight" for growth energy.</p>
-        <p>Step 3: Improve "Soil" for nutrient boost.</p>
-        <p>Step 4: Control "Pests" to protect your plant.</p>
-        <button onclick="toggleTutorial()">Close Tutorial</button>
-    </div>
-    <div id="chat">
-        <h3>Chat</h3>
-        <div id="chat-messages"></div>
-        <input type="text" id="chat-input" placeholder="Type message...">
-        <button onclick="sendChat()">Send</button>
-    </div>
-    <div id="save-load">
-        <button onclick="saveProgress()">Save Progress</button>
-        <button onclick="loadProgress()">Load Progress</button>
-    </div>
 
     <script type="text/javascript">
-        async function main() {
-            let pyodide = await loadPyodide();
-            await pyodide.loadPackage("matplotlib");
-            self.plant_sim = pyodide.globals.get("plant_sim");
+        let pyodide;
+        let plantStage = 0; // 0: seed, 1: sprout, 2: mature
+        let stats = { water: 50, sunlight: 50, soil: 50, pestRisk: 20 };
+        let weather = 'sunny';
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
 
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
-            let plantStage = 0; // 0: seed, 1: sprout, 2: mature
-            let stats = { water: 50, sunlight: 50, soil: 50, pestRisk: 20 };
-            let weather = 'sunny';
-
-            function updateWeather() {
-                const weathers = ['sunny', 'rainy', 'cloudy'];
-                weather = weathers[Math.floor(Math.random() * weathers.length)];
-                plant_sim.update_weather(weather);
-                document.getElementById('dashboard').innerText = `Weather: ${weather}\nStats: Water: ${stats.water}%, Sunlight: ${stats.sunlight}%, Soil: ${stats.soil}%, Pest Risk: ${stats.pestRisk}%`;
-            }
-
-            function drawPlant() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                plant_sim.draw_plant(ctx, plantStage, canvas.width / 2, canvas.height / 2);
-            }
-
-            function care(action) {
-                plant_sim.apply_care(action, stats);
-                plantStage = plant_sim.update_growth(stats);
-                drawPlant();
-                updateDashboard();
-            }
-
-            function updateDashboard() {
-                document.getElementById('dashboard').innerText = `Weather: ${weather}\nStats: Water: ${stats.water}%, Sunlight: ${stats.sunlight}%, Soil: ${stats.soil}%, Pest Risk: ${stats.pestRisk}%`;
-            }
-
-            function toggleTutorial() {
-                const tutorial = document.getElementById('tutorial');
-                tutorial.style.display = tutorial.style.display === 'none' ? 'block' : 'none';
-            }
-
-            function sendChat() {
-                const input = document.getElementById('chat-input').value;
-                if (input) {
-                    let messages = JSON.parse(localStorage.getItem('chat') || '[]');
-                    messages.push(`You: ${input}`);
-                    localStorage.setItem('chat', JSON.stringify(messages));
-                    document.getElementById('chat-input').value = '';
-                    updateChat();
-                }
-            }
-
-            function updateChat() {
-                const messages = JSON.parse(localStorage.getItem('chat') || '[]');
-                document.getElementById('chat-messages').innerHTML = messages.map(msg => `<p>${msg}</p>`).join('');
-            }
-
-            function saveProgress() {
-                const progress = { plantStage, stats, weather };
-                localStorage.setItem('plantProgress', JSON.stringify(progress));
-                alert('Progress saved!');
-            }
-
-            function loadProgress() {
-                const progress = JSON.parse(localStorage.getItem('plantProgress'));
-                if (progress) {
-                    plantStage = progress.plantStage;
-                    stats = progress.stats;
-                    weather = progress.weather;
-                    drawPlant();
-                    updateDashboard();
-                    alert('Progress loaded!');
-                }
-            }
-
-            // Initial setup
-            toggleTutorial();
-            setInterval(updateWeather, 5000); // Update weather every 5 seconds
-            drawPlant();
-            updateChat();
-
-            // Pyodide-compatible main loop
-            if (platform.system() === "Emscripten") {
-                asyncio.ensure_future(runLoop());
-            } else {
-                if (__name__ == "__main__"):
-                    asyncio.run(runLoop());
-            }
-
-            async function runLoop() {
-                while (true) {
-                    drawPlant();
-                    await asyncio.sleep(1.0 / 60); // 60 FPS
-                }
-            }
-        }
-
-        window.addEventListener('load', main);
-
-        // Python code embedded
-        const pythonCode = `
-import asyncio
-import platform
-import json
+        async function loadPyodideAndRun() {
+            pyodide = await loadPyodide();
+            await pyodide.runPythonAsync(`
 import random
-
-FPS = 60
-
-def draw_plant(ctx, stage, x, y):
-    ctx.fillStyle = '#000000'
-    if stage == 0:  # Seed
-        ctx.beginPath()
-        ctx.arc(x, y, 10, 0, 2 * 3.1416)
-        ctx.fill()
-    elif stage == 1:  # Sprout
-        ctx.fillRect(x - 5, y - 20, 10, 20)
-        ctx.fillStyle = '#00ff00'
-        ctx.beginPath()
-        ctx.arc(x, y - 25, 5, 0, 2 * 3.1416)
-        ctx.fill()
-    elif stage == 2:  # Mature
-        ctx.fillRect(x - 10, y - 40, 20, 40)
-        ctx.fillStyle = '#00ff00'
-        ctx.beginPath()
-        ctx.arc(x, y - 45, 10, 0, 2 * 3.1416)
-        ctx.fill()
 
 def apply_care(action, stats):
     if action == 'water':
@@ -221,9 +46,9 @@ def apply_care(action, stats):
         stats['pestRisk'] = max(0, stats['pestRisk'] - 20)
     update_stats(stats)
 
-def update_weather(weather):
-    global weather_state
-    weather_state = weather
+def update_weather():
+    weathers = ['sunny', 'rainy', 'cloudy']
+    return random.choice(weathers)
 
 def update_growth(stats):
     growth_factor = (stats['water'] + stats['sunlight'] + stats['soil']) / 3 - stats['pestRisk'] * 0.5
@@ -238,22 +63,57 @@ def update_stats(stats):
     stats['sunlight'] = max(0, stats['sunlight'] - 1)
     stats['soil'] = max(0, stats['soil'] - 1)
     stats['pestRisk'] = min(100, stats['pestRisk'] + 1)
-
-plant_sim = {
-    'draw_plant': draw_plant,
-    'apply_care': apply_care,
-    'update_weather': update_weather,
-    'update_growth': update_growth
-}
-        `;
-
-        async function loadPyodideAndRun() {
-            let pyodide = await loadPyodide();
-            await pyodide.runPython(pythonCode);
-            return pyodide;
+            `);
+            drawPlant(); // Draw plant immediately after Pyodide loads
+            updateDashboard();
         }
 
-        window.loadPyodide = loadPyodideAndRun;
+        function drawPlant() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const x = canvas.width / 2;
+            const y = canvas.height - 50;
+
+            if (plantStage === 0) {  // Seed
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.arc(x, y, 10, 0, 2 * Math.PI);
+                ctx.fill();
+            } else if (plantStage === 1) {  // Sprout
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(x - 5, y - 20, 10, 20);
+                ctx.beginPath();
+                ctx.arc(x, y - 25, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            } else if (plantStage === 2) {  // Mature
+                ctx.fillStyle = '#228B22';
+                ctx.fillRect(x - 10, y - 40, 20, 40);
+                ctx.beginPath();
+                ctx.arc(x, y - 45, 10, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        function updateWeather() {
+            weather = pyodide.globals.update_weather();
+            updateDashboard();
+        }
+
+        function care(action) {
+            pyodide.globals.apply_care(action, stats);
+            plantStage = pyodide.globals.update_growth(stats);
+            drawPlant();
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            document.getElementById('dashboard').innerText = 
+                `Weather: ${weather}\nStats: Water: ${stats.water}%, Sunlight: ${stats.sunlight}%, Soil: ${stats.soil}%, Pest Risk: ${stats.pestRisk}%`;
+        }
+
+        // Initialize the app
+        loadPyodideAndRun().then(() => {
+            setInterval(updateWeather, 5000); // Update weather every 5 seconds
+        }).catch((error) => console.error("Error loading Pyodide:", error));
     </script>
 </body>
 </html>
